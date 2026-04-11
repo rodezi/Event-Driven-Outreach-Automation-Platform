@@ -1,0 +1,52 @@
+name: Realtek Outreach Pipeline
+
+on:
+  schedule:
+    # 00:00 UTC = 19:00 CDT México (UTC-5, vigente mar-nov).
+    # En invierno CST (UTC-6) el job corre a las 18:00 — ajustar a "0 1 * * *" si es necesario.
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      max_emails:
+        description: "Máximo de emails a enviar en esta corrida (0 = sin límite)"
+        required: false
+        default: "100"
+        type: string
+
+jobs:
+  pipeline:
+    name: Fetch → Sheet → Send
+    runs-on: ubuntu-latest
+    timeout-minutes: 360   # 6 h máx (delay 2-3 min × emails)
+
+    env:
+      EASYBROKER_API_KEY:            ${{ secrets.EASYBROKER_API_KEY }}
+      GOOGLE_SERVICE_ACCOUNT_JSON:   ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      GOOGLE_SPREADSHEET_ID:         ${{ secrets.GOOGLE_SPREADSHEET_ID }}
+      RESEND_API_KEY:                ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAILS:            ${{ secrets.RESEND_FROM_EMAILS }}
+      RESEND_EMAIL_SUBJECT:          ${{ secrets.RESEND_EMAIL_SUBJECT }}
+      SEND_DELAY_MIN_SECONDS:        "120"
+      SEND_DELAY_MAX_SECONDS:        "180"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python + uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: uv sync
+
+      - name: Escribir Service Account JSON a archivo temporal
+        run: |
+          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > /tmp/sa.json
+          echo "GOOGLE_SERVICE_ACCOUNT_JSON=/tmp/sa.json" >> $GITHUB_ENV
+
+      - name: Ejecutar pipeline
+        run: |
+          MAX=${{ github.event.inputs.max_emails || '100' }}
+          uv run python main.py --run-now --max-emails "$MAX"

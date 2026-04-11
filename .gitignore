@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.json
+outreach_log.json
+debug_agencies.*
+Flujo*.png
+agencies*.png
+Screenshot*.png
+rodrigozayas-*.json
