@@ -10,7 +10,7 @@ MEXICO_TZ = ZoneInfo("America/Mexico_City")
 
 
 def _get_headers() -> dict:
-    api_key = os.getenv("EASYBROKER_API_KEY")
+    api_key = (os.getenv("EASYBROKER_API_KEY") or "").strip()
     if not api_key:
         raise ValueError("EASYBROKER_API_KEY no está definida en las variables de entorno")
     return {
