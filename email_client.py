@@ -95,6 +95,7 @@ def send_single_email(row: dict, from_email: str) -> str | None:
         result = resend.Emails.send({
             "from": from_email,
             "to": [to_email],
+            "reply_to": os.getenv("RESEND_REPLY_TO", "rodrigo@realtekmx.com"),
             "subject": _build_subject(row),
             "html": _build_email_body(row, from_email),
         })
