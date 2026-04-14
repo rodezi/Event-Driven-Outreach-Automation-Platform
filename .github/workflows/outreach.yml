@@ -25,7 +25,6 @@ jobs:
       GOOGLE_SPREADSHEET_ID:         ${{ secrets.GOOGLE_SPREADSHEET_ID }}
       RESEND_API_KEY:                ${{ secrets.RESEND_API_KEY }}
       RESEND_FROM_EMAILS:            ${{ secrets.RESEND_FROM_EMAILS }}
-      RESEND_EMAIL_SUBJECT:          ${{ secrets.RESEND_EMAIL_SUBJECT }}
       SEND_DELAY_MIN_SECONDS:        "120"
       SEND_DELAY_MAX_SECONDS:        "180"
 
