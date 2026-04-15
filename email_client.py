@@ -55,31 +55,27 @@ def _build_email_body(row: dict, from_email: str) -> str:
 
   <p>{saludo}</p>
 
-  <p>Nos cruzamos en EasyBroker hace unos días y me quedé pensando en algo
-  que vale la pena compartirle.</p>
+  <p>Vi que su agencia tiene presencia en portales inmobiliarios y me quedé
+  pensando en algo que vale la pena compartirle.</p>
 
-  <p>Revisé cómo responden a prospectos inmobiliarias similares a
-  <strong>{agencia}</strong> en su zona, y encontré algo concreto:
-  la mayoría pierde entre el 40 y 60% de sus leads simplemente por tiempo
-  de respuesta — no por precio, ni por inventario.</p>
+  <p>Revisé cómo responden inmobiliarias similares en su zona, y encontré
+  algo concreto: la mayoría pierde entre el 40 y 60% de sus leads simplemente
+  por tiempo de respuesta — no por precio, ni por inventario.</p>
 
   <p>Con las agencias con las que trabajamos, ese tiempo bajó de un promedio
-  de 3 horas a <strong>menos de 90 segundos</strong>. En los primeros 30 días,
-  el 78% reportó más visitas agendadas sin contratar a nadie nuevo.</p>
+  de 3 horas a <strong>menos de 90 segundos</strong>.</p>
 
-  <p>Llevamos 3 años trabajando exclusivamente con inmobiliarias en México.
-  No somos una agencia de marketing genérica — conocemos EasyBroker,
-  los ciclos de compra locales y los retos específicos del sector.</p>
+  <p>Trabajamos exclusivamente con inmobiliarias en México. Conocemos los
+  ciclos de compra locales y los retos específicos del sector.</p>
 
   <p>Antes de pedirle cualquier cosa: ¿le mando un video de 90 segundos
-  donde le muestro exactamente cómo funcionaría para
-  <strong>{agencia}</strong>?</p>
+  donde le muestro exactamente cómo funcionaría para su inmobiliaria?</p>
 
   <p>Solo responda <strong>"sí"</strong> y se lo envío hoy.</p>
 
   <p>
-    Rodrigo<br>
-    Realtek &mdash; <a href="tel:4427920802" style="color:#1a1a1a;">442 792 0802</a>
+    Rodrigo<br><br>
+    Realtek
   </p>
 
   <p style="color: #777; font-size: 13px;">
