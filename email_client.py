@@ -40,38 +40,52 @@ def _get_senders() -> list[str]:
 def _build_subject(row: dict) -> str:
     agencia = row.get("Empresa") or row.get("Nombre") or "su agencia"
     subject_tpl = os.getenv("RESEND_EMAIL_SUBJECT", "").strip() or \
-        "¿Cuántos leads perdió {agencia} este último mes?"
+        "algo que encontré para {agencia}"
     return subject_tpl.replace("{agencia}", agencia)
 
 
 def _build_email_body(row: dict, from_email: str) -> str:
-    agencia = row.get("Empresa") or row.get("Nombre") or "su agencia"
+    nombre = row.get("Nombre") or ""
+    agencia = row.get("Empresa") or nombre or "su agencia"
+    saludo = f"Hola{', ' + nombre.split()[0] if nombre else ''},"
 
     return f"""\
 <html>
-<body style="font-family: Georgia, serif; color: #1a1a1a; max-width: 580px; margin: auto; line-height: 1.7; font-size: 15px;">
+<body style="font-family: Georgia, serif; color: #1a1a1a; max-width: 560px; margin: auto; line-height: 1.75; font-size: 15px;">
 
-  <p>El 60% de los compradores elige a la primera inmobiliaria que le responde.
-  No la más grande, ni la que tiene más propiedades — <strong>la más rápida.</strong></p>
+  <p>{saludo}</p>
 
-  <p>Cuando el cliente tiene urgencia, los primeros minutos son todo. Si el equipo
-  tarda 2 horas en contestar, ese lead ya tomó una decisión. Gente lista para comprar,
-  que se fue con alguien más porque llegaron primero.</p>
+  <p>Nos cruzamos en EasyBroker hace unos días y me quedé pensando en algo
+  que vale la pena compartirle.</p>
 
-  <p>Y eso sin contar lo que costó conseguirlos.</p>
+  <p>Revisé cómo responden a prospectos inmobiliarias similares a
+  <strong>{agencia}</strong> en su zona, y encontré algo concreto:
+  la mayoría pierde entre el 40 y 60% de sus leads simplemente por tiempo
+  de respuesta — no por precio, ni por inventario.</p>
 
-  <p>Lo que instalamos <strong>responde en menos de 90 segundos</strong>, califica al
-  prospecto y agenda la visita, sin cambiar cómo trabaja su equipo.</p>
+  <p>Con las agencias con las que trabajamos, ese tiempo bajó de un promedio
+  de 3 horas a <strong>menos de 90 segundos</strong>. En los primeros 30 días,
+  el 78% reportó más visitas agendadas sin contratar a nadie nuevo.</p>
 
-  <p>¿Le caería bien una llamada de 20 minutos esta semana?</p>
+  <p>Llevamos 3 años trabajando exclusivamente con inmobiliarias en México.
+  No somos una agencia de marketing genérica — conocemos EasyBroker,
+  los ciclos de compra locales y los retos específicos del sector.</p>
+
+  <p>Antes de pedirle cualquier cosa: ¿le mando un video de 90 segundos
+  donde le muestro exactamente cómo funcionaría para
+  <strong>{agencia}</strong>?</p>
+
+  <p>Solo responda <strong>"sí"</strong> y se lo envío hoy.</p>
 
   <p>
-    Rodrigo — <a href="tel:4427920802">442 792 0802</a>
+    Rodrigo<br>
+    Realtek &mdash; <a href="tel:4427920802" style="color:#1a1a1a;">442 792 0802</a>
   </p>
 
-  <p style="color: #555; font-size: 13px;">
-    PD: Si no es el momento, sin problema. Pero si quiere ver cómo funciona
-    aplicado a <strong>{agencia}</strong>, en 20 minutos le muestro resultados concretos.
+  <p style="color: #777; font-size: 13px;">
+    PD: Por política interna trabajo con máximo dos agencias por zona
+    para no generar conflicto de interés. Si ya hay una en su área,
+    se lo digo de entrada.
   </p>
 
 </body>
