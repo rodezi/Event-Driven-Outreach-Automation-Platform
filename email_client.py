@@ -40,7 +40,7 @@ def _get_senders() -> list[str]:
 def _build_subject(row: dict) -> str:
     agencia = row.get("Empresa") or row.get("Nombre") or "su agencia"
     subject_tpl = os.getenv("RESEND_EMAIL_SUBJECT", "").strip() or \
-        "algo que encontré para {agencia}"
+        "¿Cuántos leads perdió {agencia} este último mes?"
     return subject_tpl.replace("{agencia}", agencia)
 
 
