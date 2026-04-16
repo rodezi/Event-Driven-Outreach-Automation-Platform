@@ -19,25 +19,28 @@ def _get_headers() -> dict:
     }
 
 
-def _updated_after_filter() -> str:
+def _updated_after_filter(days_back: int = 0) -> str:
     """
-    Retorna las 00:00 de hoy en hora México (inicio del día).
-    Así se capturan todos los contactos creados/actualizados durante el día,
-    sin importar a qué hora exacta se hizo el outreach manual.
+    Retorna las 00:00 del día objetivo en hora México.
+    days_back=0 → hoy a las 00:00 (comportamiento normal).
+    days_back=1 → ayer a las 00:00 (útil cuando el outreach fue después del job).
 
-    Ejemplo: job corre a las 19:00 del 10 abr → "2026-04-10T00:00:00-05:00"
+    Ejemplo: job corre hoy 16 abr, days_back=1 → "2026-04-15T00:00:00-06:00"
     """
+    from datetime import timedelta
     now_mx = datetime.now(MEXICO_TZ)
-    start_of_day = now_mx.replace(hour=0, minute=0, second=0, microsecond=0)
+    target_day = now_mx - timedelta(days=days_back)
+    start_of_day = target_day.replace(hour=0, minute=0, second=0, microsecond=0)
     return start_of_day.isoformat()
 
 
-def fetch_contacts_paginated() -> Generator[list[dict], None, None]:
+def fetch_contacts_paginated(days_back: int = 0) -> Generator[list[dict], None, None]:
     """
     Genera páginas de contactos desde EasyBroker.
-    Filtra con search[updated_after] = hoy a las 19:00 hora México.
+    days_back=0 → filtra desde hoy 00:00 (default).
+    days_back=1 → filtra desde ayer 00:00.
     """
-    updated_after = _updated_after_filter()
+    updated_after = _updated_after_filter(days_back)
     print(f"[easybroker] Filtrando contactos actualizados después de: {updated_after}")
 
     params = {
@@ -70,10 +73,10 @@ def fetch_contacts_paginated() -> Generator[list[dict], None, None]:
         params["page"] += 1
 
 
-def fetch_all_contacts() -> list[dict]:
-    """Retorna todos los contactos del día concatenando todas las páginas."""
+def fetch_all_contacts(days_back: int = 0) -> list[dict]:
+    """Retorna todos los contactos del período concatenando todas las páginas."""
     all_contacts = []
-    for page in fetch_contacts_paginated():
+    for page in fetch_contacts_paginated(days_back):
         all_contacts.extend(page)
     return all_contacts
 
@@ -94,7 +97,7 @@ def parse_contact(raw: dict) -> dict:
     }
 
 
-def get_parsed_contacts() -> list[dict]:
-    """Pipeline completo: fetch + parse de contactos del día."""
-    raw_contacts = fetch_all_contacts()
+def get_parsed_contacts(days_back: int = 0) -> list[dict]:
+    """Pipeline completo: fetch + parse de contactos del período."""
+    raw_contacts = fetch_all_contacts(days_back)
     return [parse_contact(c) for c in raw_contacts]

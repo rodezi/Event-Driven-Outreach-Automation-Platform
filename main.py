@@ -38,17 +38,19 @@ def _on_email_sent(row: dict, resend_id: str, from_email: str) -> None:
             print(f"[pipeline] No se pudo marcar fila {row_index}: {exc}")
 
 
-def run_pipeline(max_emails: int = 0) -> None:
+def run_pipeline(max_emails: int = 0, days_back: int = 0) -> None:
     print("\n========================================")
     print("  Realtek Outreach Pipeline — INICIO")
     if max_emails:
         print(f"  Límite de emails esta corrida: {max_emails}")
+    if days_back:
+        print(f"  Retrocediendo {days_back} día(s) en el filtro de EasyBroker")
     print("========================================\n")
 
     # ── 1. Fetch contactos de EasyBroker ──────────────────────────────────────
     print("[1/4] Extrayendo contactos de EasyBroker...")
     try:
-        contacts = get_parsed_contacts()
+        contacts = get_parsed_contacts(days_back=days_back)
         print(f"      {len(contacts)} contactos obtenidos.")
     except Exception as exc:
         print(f"[ERROR] EasyBroker: {exc}")
@@ -112,9 +114,16 @@ def main() -> None:
         metavar="N",
         help="Máximo de emails a enviar en esta corrida (0 = sin límite)",
     )
+    parser.add_argument(
+        "--days-back",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Días hacia atrás en el filtro de EasyBroker (0 = hoy, 1 = ayer, etc.)",
+    )
     args = parser.parse_args()
 
-    run_pipeline(max_emails=args.max_emails)
+    run_pipeline(max_emails=args.max_emails, days_back=args.days_back)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,11 @@ on:
         required: false
         default: "100"
         type: string
+      days_back:
+        description: "Días hacia atrás en el filtro de EasyBroker (0 = hoy, 1 = ayer)"
+        required: false
+        default: "0"
+        type: string
 
 jobs:
   pipeline:
@@ -48,4 +53,5 @@ jobs:
       - name: Ejecutar pipeline
         run: |
           MAX=${{ github.event.inputs.max_emails || '100' }}
-          uv run python main.py --run-now --max-emails "$MAX"
+          DAYS=${{ github.event.inputs.days_back || '0' }}
+          uv run python main.py --run-now --max-emails "$MAX" --days-back "$DAYS"
