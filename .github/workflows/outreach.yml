@@ -2,9 +2,8 @@ name: Realtek Outreach Pipeline
 
 on:
   schedule:
-    # 00:00 UTC = 19:00 CDT México (UTC-5, vigente mar-nov).
-    # En invierno CST (UTC-6) el job corre a las 18:00 — ajustar a "0 1 * * *" si es necesario.
-    - cron: "0 0 * * *"
+    # 01:00 UTC = 19:00 CST México (UTC-6, permanente desde 2023).
+    - cron: "0 1 * * *"
   workflow_dispatch:
     inputs:
       max_emails:
