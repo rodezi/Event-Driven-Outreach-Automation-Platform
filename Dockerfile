@@ -16,8 +16,8 @@ COPY requirements-scraper.txt .
 RUN pip install --no-cache-dir -r requirements-scraper.txt
 RUN playwright install chromium
 
-COPY scraper.py email_enricher.py sheets_client.py .
+COPY scraper.py email_enricher.py sheets_client.py cities.py .
 
-# Corre scraper primero, luego enriquece emails
-# Railway ejecuta este comando según el cron configurado en el dashboard
-CMD ["sh", "-c", "python scraper.py && python email_enricher.py --limit 200"]
+# SCRAPER_CITY se define en Railway como variable de entorno (ej: CDMX, QUERETARO)
+# Corre scraper de la ciudad configurada, luego enriquece los emails encontrados
+CMD ["sh", "-c", "python scraper.py --city ${SCRAPER_CITY:-CDMX} && python email_enricher.py --limit 500"]

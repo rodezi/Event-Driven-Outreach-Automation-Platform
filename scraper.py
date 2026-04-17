@@ -3,11 +3,13 @@ Google Maps scraper para inmobiliarias en México.
 Guarda directo a Google Sheets (mismo sheet del sistema de outreach).
 
 Uso:
-    python scraper.py                          # todas las queries
-    python scraper.py --max-results 20         # limita por query
-    python scraper.py --csv backup.csv         # también guarda CSV
-    python scraper.py --no-sheets              # solo CSV, no escribe al sheet
-    python scraper.py --headless false         # abre browser visible (debug)
+    python scraper.py --city CDMX              # scrape una ciudad completa
+    python scraper.py --city QUERETARO
+    python scraper.py --list-cities            # ver ciudades disponibles
+    python scraper.py --city CDMX --max-results 150   # limita por query
+    python scraper.py --city CDMX --csv backup.csv    # también guarda CSV
+    python scraper.py --city CDMX --no-sheets         # solo CSV
+    python scraper.py --city CDMX --headless false    # browser visible (debug)
 
 Variables de entorno requeridas para Sheets:
     GOOGLE_SPREADSHEET_ID
@@ -24,23 +26,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright, Page, Locator
+from cities import get_queries, list_cities
 
 load_dotenv()
-
-QUERIES = [
-    "inmobiliaria Guadalajara",
-    "inmobiliaria CDMX Polanco",
-    "inmobiliaria Ciudad de México Santa Fe",
-    "inmobiliaria Monterrey",
-    "inmobiliaria Los Cabos",
-    "inmobiliaria Cancún",
-    "inmobiliaria Querétaro",
-    "inmobiliaria Playa del Carmen",
-    "inmobiliaria Puerto Vallarta",
-    "inmobiliaria Mérida",
-    "inmobiliaria Tijuana",
-    "inmobiliaria San Miguel de Allende",
-]
 
 
 @dataclass
@@ -283,8 +271,10 @@ def save_to_sheets(businesses: list[Business]) -> int:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-async def main(max_results: int, csv_path: str | None, skip_sheets: bool, headless: bool):
-    results = await scrape_google_maps(QUERIES, max_results=max_results, headless=headless)
+async def main(city: str, max_results: int, csv_path: str | None, skip_sheets: bool, headless: bool):
+    queries = get_queries(city)
+    print(f"\nCiudad: {city} — {len(queries)} zonas a scrapear")
+    results = await scrape_google_maps(queries, max_results=max_results, headless=headless)
 
     if not results:
         print("[!] No se encontraron resultados.")
@@ -318,8 +308,12 @@ async def main(max_results: int, csv_path: str | None, skip_sheets: bool, headle
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Google Maps scraper — inmobiliarias MX")
-    parser.add_argument("--max-results", type=int, default=100,
-                        help="Máximo de resultados por query (default: 100)")
+    parser.add_argument("--city", required=False, default=None,
+                        help="Ciudad a scrapear (ej: CDMX, QUERETARO, GUADALAJARA)")
+    parser.add_argument("--list-cities", action="store_true",
+                        help="Muestra ciudades disponibles y cuántas zonas tiene cada una")
+    parser.add_argument("--max-results", type=int, default=150,
+                        help="Máximo de resultados por zona/query (default: 150)")
     parser.add_argument("--csv", default=None, metavar="ARCHIVO",
                         help="Guardar también CSV de backup")
     parser.add_argument("--no-sheets", action="store_true",
@@ -328,9 +322,15 @@ if __name__ == "__main__":
                         help="'false' para ver el browser (debug)")
     args = parser.parse_args()
 
-    asyncio.run(main(
-        max_results=args.max_results,
-        csv_path=args.csv,
-        skip_sheets=args.no_sheets,
-        headless=args.headless.lower() != "false",
-    ))
+    if args.list_cities:
+        list_cities()
+    elif not args.city:
+        parser.error("Se requiere --city o --list-cities")
+    else:
+        asyncio.run(main(
+            city=args.city,
+            max_results=args.max_results,
+            csv_path=args.csv,
+            skip_sheets=args.no_sheets,
+            headless=args.headless.lower() != "false",
+        ))
