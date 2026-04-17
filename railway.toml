@@ -1,0 +1,9 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Cron configurado en Railway dashboard:
+#   2:00 AM CST  →  "0 8 * * *"   (UTC-6)
+# El job corre scraper.py → email_enricher.py en secuencia
+restartPolicyType = "never"

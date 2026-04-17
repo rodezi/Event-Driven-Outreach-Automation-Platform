@@ -1,30 +1,23 @@
-name: Realtek Outreach Pipeline
+name: Realtek Email Pipeline
 
 on:
   schedule:
-    # 01:00 UTC = 19:00 CST México (UTC-6, permanente desde 2023).
-    - cron: "0 1 * * *"
+    - cron: "0 13 * * *"   # 7:00 AM CST (UTC-6) todos los días
   workflow_dispatch:
     inputs:
       max_emails:
-        description: "Máximo de emails a enviar en esta corrida (0 = sin límite)"
+        description: "Máximo de emails a enviar (default: 100)"
         required: false
         default: "100"
         type: string
-      days_back:
-        description: "Días hacia atrás en el filtro de EasyBroker (0 = hoy, 1 = ayer)"
-        required: false
-        default: "0"
-        type: string
 
 jobs:
-  pipeline:
-    name: Fetch → Sheet → Send
+  send-emails:
+    name: Sheet → Send 100 emails
     runs-on: ubuntu-latest
-    timeout-minutes: 360   # 6 h máx (delay 2-3 min × emails)
+    timeout-minutes: 360   # 6 h máx (delay 2-3 min × 100 emails)
 
     env:
-      EASYBROKER_API_KEY:            ${{ secrets.EASYBROKER_API_KEY }}
       GOOGLE_SERVICE_ACCOUNT_JSON:   ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
       GOOGLE_SPREADSHEET_ID:         ${{ secrets.GOOGLE_SPREADSHEET_ID }}
       RESEND_API_KEY:                ${{ secrets.RESEND_API_KEY }}
@@ -49,8 +42,7 @@ jobs:
           echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > /tmp/sa.json
           echo "GOOGLE_SERVICE_ACCOUNT_JSON=/tmp/sa.json" >> $GITHUB_ENV
 
-      - name: Ejecutar pipeline
+      - name: Enviar emails
         run: |
           MAX=${{ github.event.inputs.max_emails || '100' }}
-          DAYS=${{ github.event.inputs.days_back || '0' }}
-          uv run python main.py --run-now --max-emails "$MAX" --days-back "$DAYS"
+          uv run python main.py --max-emails "$MAX"

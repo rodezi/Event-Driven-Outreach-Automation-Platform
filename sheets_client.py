@@ -24,6 +24,7 @@ HEADERS = [
     "Email Abierto",   # webhook email.opened
     "Email Entregado", # webhook email.delivered
     "Rebote",          # webhook email.bounced
+    "Web",             # URL del sitio web (leads del scraper)
 ]
 
 CONTACT_KEYS = [
@@ -204,3 +205,89 @@ def update_email_event(resend_id: str, event_type: str, sheet_name: str = "Conta
 
     print(f"[sheets] No se encontró fila con Resend ID: {resend_id}")
     return False
+
+
+# ── Scraper leads ──────────────────────────────────────────────────────────────
+
+def _get_existing_phones(ws: gspread.Worksheet) -> set[str]:
+    all_values = ws.get_all_values()
+    if len(all_values) <= 1:
+        return set()
+    try:
+        phone_col = all_values[0].index("Teléfono")
+    except ValueError:
+        return set()
+    return {row[phone_col] for row in all_values[1:] if len(row) > phone_col and row[phone_col]}
+
+
+def save_scraper_leads_to_sheet(leads: list[dict], sheet_name: str = "Contactos") -> int:
+    """
+    Guarda leads del scraper de Google Maps en el sheet.
+    Deduplicación por teléfono.
+
+    Cada lead debe tener: nombre, telefono, email, website
+    """
+    ws = _open_worksheet(sheet_name)
+    existing_phones = _get_existing_phones(ws)
+    new_rows = []
+
+    from datetime import date
+    today = date.today().isoformat()
+
+    for lead in leads:
+        phone = lead.get("telefono", "").strip()
+        if not phone or phone in existing_phones:
+            continue
+
+        row = [
+            f"scraper-{phone}",       # ID
+            lead.get("nombre", ""),   # Nombre
+            lead.get("email", ""),    # Email
+            phone,                    # Teléfono
+            "",                       # Teléfono Móvil
+            lead.get("nombre", ""),   # Empresa
+            "Google Maps",            # Fuente
+            "",                       # Etapa
+            "",                       # Estatus
+            today,                    # Creado en
+            today,                    # Actualizado en
+            "No",                     # Email Enviado
+            "",                       # Resend ID
+            "No",                     # Email Abierto
+            "No",                     # Email Entregado
+            "No",                     # Rebote
+            lead.get("website", ""),  # Web
+        ]
+        new_rows.append(row)
+        existing_phones.add(phone)
+
+    if new_rows:
+        ws.append_rows(new_rows, value_input_option="USER_ENTERED")
+
+    return len(new_rows)
+
+
+def get_rows_needing_email_enrichment(sheet_name: str = "Contactos") -> list[dict]:
+    """Filas donde Email está vacío pero Web tiene URL."""
+    ws = _open_worksheet(sheet_name)
+    all_values = ws.get_all_values()
+    if len(all_values) <= 1:
+        return []
+
+    headers = all_values[0]
+    pending = []
+    for i, row in enumerate(all_values[1:], start=2):
+        row_dict = dict(zip(headers, row))
+        if not row_dict.get("Email", "").strip() and row_dict.get("Web", "").strip():
+            row_dict["_row_index"] = i
+            pending.append(row_dict)
+
+    return pending
+
+
+def update_email_for_row(row_index: int, email: str, sheet_name: str = "Contactos") -> None:
+    """Escribe el email encontrado en la fila correspondiente."""
+    ws = _open_worksheet(sheet_name)
+    col_email = HEADERS.index("Email") + 1
+    cell = gspread.utils.rowcol_to_a1(row_index, col_email)
+    ws.update(cell, email)
