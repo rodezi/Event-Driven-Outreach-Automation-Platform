@@ -42,6 +42,9 @@ jobs:
           echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > /tmp/sa.json
           echo "GOOGLE_SERVICE_ACCOUNT_JSON=/tmp/sa.json" >> $GITHUB_ENV
 
+      - name: Enriquecer emails desde sitios web
+        run: uv run python email_enricher.py --limit 300
+
       - name: Enviar emails
         run: |
           MAX=${{ github.event.inputs.max_emails || '100' }}
