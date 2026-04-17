@@ -7,4 +7,4 @@ RUN pip install --no-cache-dir -r requirements-scraper.txt
 
 COPY scraper.py email_enricher.py sheets_client.py cities.py .
 
-CMD ["sh", "-c", "python scraper.py --city ${SCRAPER_CITY:-CDMX} && python email_enricher.py --limit 500"]
+CMD ["sh", "-c", "python scraper.py --city ${SCRAPER_CITY:-CDMX} && python email_enricher.py --limit 500; tail -f /dev/null"]
