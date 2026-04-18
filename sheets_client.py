@@ -136,7 +136,7 @@ def get_pending_email_rows(sheet_name: str = "Contactos") -> list[dict]:
     pending = []
     for i, row in enumerate(all_values[1:], start=2):
         row_dict = dict(zip(headers, row))
-        if row_dict.get("Email Enviado") == "No" and row_dict.get("Email"):
+        if row_dict.get("Email Enviado", "").strip() in ("No", "") and row_dict.get("Email"):
             row_dict["_row_index"] = i
             pending.append(row_dict)
 
