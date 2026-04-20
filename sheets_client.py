@@ -290,4 +290,4 @@ def update_email_for_row(row_index: int, email: str, sheet_name: str = "Contacto
     ws = _open_worksheet(sheet_name)
     col_email = HEADERS.index("Email") + 1
     cell = gspread.utils.rowcol_to_a1(row_index, col_email)
-    ws.update(cell, email)
+    ws.update(cell, [[email]])
