@@ -89,7 +89,7 @@ def find_email_in_site(url: str) -> str:
 
 def main(limit: int | None, dry_run: bool):
     print("Leyendo sheet...")
-    rows = get_rows_needing_email_enrichment()
+    rows, existing_emails = get_rows_needing_email_enrichment()
 
     if not rows:
         print("No hay filas pendientes de enriquecer.")
@@ -103,6 +103,7 @@ def main(limit: int | None, dry_run: bool):
         print("[DRY RUN] No se escribirá nada al sheet.\n")
 
     found = 0
+    skipped_dup = 0
     for i, row in enumerate(rows, start=1):
         nombre = row.get("Nombre", "")[:40]
         web = row.get("Web", "").strip()
@@ -112,16 +113,21 @@ def main(limit: int | None, dry_run: bool):
         email = find_email_in_site(web)
 
         if email:
-            found += 1
-            print(email)
-            if not dry_run:
-                update_email_for_row(row_index, email)
+            if email.lower() in existing_emails:
+                skipped_dup += 1
+                print(f"{email} [duplicado, omitido]")
+            else:
+                found += 1
+                existing_emails.add(email.lower())
+                print(email)
+                if not dry_run:
+                    update_email_for_row(row_index, email)
         else:
             print("—")
 
         time.sleep(1)
 
-    print(f"\nEmails encontrados: {found}/{len(rows)}")
+    print(f"\nEmails encontrados: {found}/{len(rows)}  |  Duplicados omitidos: {skipped_dup}")
     if not dry_run:
         print("Sheet actualizado.")
 

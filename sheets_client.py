@@ -209,6 +209,17 @@ def update_email_event(resend_id: str, event_type: str, sheet_name: str = "Conta
 
 # ── Scraper leads ──────────────────────────────────────────────────────────────
 
+def _get_existing_emails(ws: gspread.Worksheet) -> set[str]:
+    all_values = ws.get_all_values()
+    if len(all_values) <= 1:
+        return set()
+    try:
+        email_col = all_values[0].index("Email")
+    except ValueError:
+        return set()
+    return {row[email_col].strip().lower() for row in all_values[1:] if len(row) > email_col and row[email_col].strip()}
+
+
 def _get_existing_phones(ws: gspread.Worksheet) -> set[str]:
     all_values = ws.get_all_values()
     if len(all_values) <= 1:
@@ -267,14 +278,35 @@ def save_scraper_leads_to_sheet(leads: list[dict], sheet_name: str = "Contactos"
     return len(new_rows)
 
 
-def get_rows_needing_email_enrichment(sheet_name: str = "Contactos") -> list[dict]:
-    """Filas donde Email está vacío pero Web tiene URL."""
+def get_rows_needing_email_enrichment(
+    sheet_name: str = "Contactos",
+) -> tuple[list[dict], set[str]]:
+    """
+    Retorna:
+      - filas donde Email está vacío pero Web tiene URL
+      - set de emails ya existentes en el sheet (normalizados a minúsculas)
+        para que el enricher pueda evitar escribir duplicados.
+    """
     ws = _open_worksheet(sheet_name)
     all_values = ws.get_all_values()
     if len(all_values) <= 1:
-        return []
+        return [], set()
 
     headers = all_values[0]
+
+    try:
+        email_col = headers.index("Email")
+    except ValueError:
+        email_col = None
+
+    existing_emails: set[str] = set()
+    if email_col is not None:
+        existing_emails = {
+            row[email_col].strip().lower()
+            for row in all_values[1:]
+            if len(row) > email_col and row[email_col].strip()
+        }
+
     pending = []
     for i, row in enumerate(all_values[1:], start=2):
         row_dict = dict(zip(headers, row))
@@ -282,7 +314,7 @@ def get_rows_needing_email_enrichment(sheet_name: str = "Contactos") -> list[dic
             row_dict["_row_index"] = i
             pending.append(row_dict)
 
-    return pending
+    return pending, existing_emails
 
 
 def update_email_for_row(row_index: int, email: str, sheet_name: str = "Contactos") -> None:
@@ -291,3 +323,11 @@ def update_email_for_row(row_index: int, email: str, sheet_name: str = "Contacto
     col_email = HEADERS.index("Email") + 1
     cell = gspread.utils.rowcol_to_a1(row_index, col_email)
     ws.update(cell, [[email]])
+
+
+def mark_email_invalid(row_index: int, sheet_name: str = "Contactos") -> None:
+    """Marca la fila como inválida para que el pipeline la salte."""
+    ws = _open_worksheet(sheet_name)
+    col_sent = HEADERS.index("Email Enviado") + 1
+    cell = gspread.utils.rowcol_to_a1(row_index, col_sent)
+    ws.update(cell, [["Inválido"]])
