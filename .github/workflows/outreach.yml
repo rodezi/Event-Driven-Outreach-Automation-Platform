@@ -1,8 +1,6 @@
 name: Realtek Email Pipeline
 
 on:
-  schedule:
-    - cron: "0 13 * * *"   # 7:00 AM CST (UTC-6) todos los días
   workflow_dispatch:
     inputs:
       max_emails:
@@ -44,6 +42,9 @@ jobs:
 
       - name: Enriquecer emails desde sitios web
         run: uv run python email_enricher.py --limit 300
+
+      - name: Validar emails (MX check)
+        run: uv run python validate_emails.py
 
       - name: Enviar emails
         run: |
