@@ -67,7 +67,12 @@ def pick_row_to_keep(rows: list[dict]) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Elimina filas duplicadas por email.")
     parser.add_argument("--dry-run", action="store_true", help="Solo muestra duplicados, no borra.")
-    parser.add_argument("--limit", type=int, default=0, help="Máximo de grupos de duplicados a procesar (0 = todos).")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Máximo de grupos de duplicados a procesar (0 = todos).",
+    )
     parser.add_argument("--sheet", default="Contactos", help="Nombre de la hoja de cálculo.")
     args = parser.parse_args()
 
@@ -99,7 +104,10 @@ def main() -> None:
         )
         for r in rows:
             if r["row_index"] in to_delete:
-                print(f"  Borrar   → fila {r['row_index']} | {r['nombre']!r} | Enviado={r['sent']!r}")
+                print(
+                    f"  Borrar   → fila {r['row_index']} | "
+                    f"{r['nombre']!r} | Enviado={r['sent']!r}"
+                )
 
         rows_to_delete.extend(to_delete)
 

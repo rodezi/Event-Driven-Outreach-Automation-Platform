@@ -18,7 +18,6 @@ import re
 import time
 
 import requests
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 from sheets_client import get_rows_needing_email_enrichment, update_email_for_row

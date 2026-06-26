@@ -16,17 +16,19 @@ Variables de entorno requeridas para Sheets:
     GOOGLE_SERVICE_ACCOUNT_JSON
 """
 
-import asyncio
 import argparse
+import asyncio
 import csv
-import os
 import re
+from contextlib import suppress
 from dataclasses import dataclass, fields
 from pathlib import Path
 
 from dotenv import load_dotenv
-from playwright.async_api import async_playwright, Page, Locator
+from playwright.async_api import Locator, Page, async_playwright
+
 from cities import get_queries, list_cities
+from outreach_system.config import get_settings
 
 load_dotenv()
 
@@ -49,15 +51,11 @@ class Business:
 async def extract_business(page: Page) -> Business:
     biz = Business()
 
-    try:
+    with suppress(Exception):
         biz.nombre = await page.locator("h1.DUwDvf").first.inner_text(timeout=3000)
-    except Exception:
-        pass
 
-    try:
+    with suppress(Exception):
         biz.categoria = await page.locator("button.DkEaL").first.inner_text(timeout=2000)
-    except Exception:
-        pass
 
     try:
         address_el = page.locator('[data-item-id="address"]')
@@ -88,12 +86,10 @@ async def extract_business(page: Page) -> Business:
     except Exception:
         pass
 
-    try:
+    with suppress(Exception):
         biz.rating = await page.locator(
             "div.F7nice span[aria-hidden='true']"
         ).first.inner_text(timeout=2000)
-    except Exception:
-        pass
 
     try:
         reviews_raw = await page.locator(
@@ -217,10 +213,8 @@ async def scrape_google_maps(
 
                 no_new_count = 0 if new_found else no_new_count + 1
 
-                try:
+                with suppress(Exception):
                     await slow_scroll(page, results_selector, times=3)
-                except Exception:
-                    pass
 
                 try:
                     end_msg = await page.locator(
@@ -271,7 +265,13 @@ def save_to_sheets(businesses: list[Business]) -> int:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-async def main(city: str, max_results: int, csv_path: str | None, skip_sheets: bool, headless: bool):
+async def main(
+    city: str,
+    max_results: int,
+    csv_path: str | None,
+    skip_sheets: bool,
+    headless: bool,
+):
     queries = get_queries(city)
     print(f"\nCiudad: {city} — {len(queries)} zonas a scrapear")
     results = await scrape_google_maps(queries, max_results=max_results, headless=headless)
@@ -296,9 +296,9 @@ async def main(city: str, max_results: int, csv_path: str | None, skip_sheets: b
         save_to_csv(unique, csv_path)
 
     if not skip_sheets:
-        has_config = (
-            os.getenv("GOOGLE_SPREADSHEET_ID")
-            and os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+        settings = get_settings()
+        has_config = bool(
+            settings.google_spreadsheet_id and settings.google_service_account_json
         )
         if has_config:
             save_to_sheets(unique)

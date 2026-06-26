@@ -7,10 +7,11 @@ Corre una vez y elimina el archivo.
 """
 
 import argparse
-import os
+
 import gspread
 from dotenv import load_dotenv
-from sheets_client import _open_worksheet, HEADERS
+
+from sheets_client import _open_worksheet
 
 load_dotenv()
 

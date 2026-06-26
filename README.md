@@ -1,143 +1,166 @@
-# Realtek Outreach System
+# Event-Driven Outreach Automation Platform
 
-Sistema de adquisición de clientes para **Realtek**. Automatiza el seguimiento de inmobiliarias contactadas en EasyBroker: las guarda en Google Sheets y les manda un correo de outreach personalizado esa misma noche.
+Python portfolio project that automates a low-volume outbound workflow around EasyBroker, Google Sheets, Resend, FastAPI, Railway, and GitHub Actions.
 
----
+## What problem it solves
 
-## Cómo funciona en la práctica
+When outbound contacts are created during the day inside a CRM, follow-up often depends on manual exports, manual deduplication, and inconsistent email tracking. This project turns that into a scheduled, event-driven workflow with a pragmatic operator-friendly datastore.
 
-```
-TÚ (durante el día)                    SISTEMA (automático a las 7 PM)
-────────────────────                   ──────────────────────────────
-Entras a EasyBroker                    GitHub Actions se activa
-Buscas propiedades de otras            Llama la API de EasyBroker y
-inmobiliarias y les envías             jala los contactos del día
-"Solicitar información" →
-EasyBroker crea el contacto            Los guarda en Google Sheets
+## Architecture
 
-                                       Manda un email personalizado
-                                       a cada uno (1 cada 2-3 min)
-                                       alternando rodrigo@ e info@
-
-                                       Si alguien abre o rebota el
-                                       email → Sheets se actualiza
-                                       automáticamente via webhook
+```mermaid
+flowchart TD
+    A[EasyBroker API] --> B[GitHub Actions Scheduler]
+    B --> C[Python Outreach Pipeline]
+    C --> D[Normalize and Deduplicate]
+    D --> E[Google Sheets Repository]
+    E --> F[Pending Contact Selection]
+    F --> G[Resend Email API]
+    G --> H[Recipient Mail Server]
+    G --> I[Resend Webhook Events]
+    I --> J[FastAPI Webhook Service]
+    J --> E
 ```
 
----
+## Execution flow
 
-## Scripts del proyecto
+1. GitHub Actions triggers the pipeline on a daily schedule or manually.
+2. The pipeline fetches recent contacts from EasyBroker.
+3. Contacts are normalized into typed models and deduplicated by `external_id`.
+4. New contacts are stored in Google Sheets.
+5. Pending contacts are marked as `processing` before delivery.
+6. Resend sends emails with configurable throttling and sender rotation across configured identities.
+7. Successful sends persist the provider message id.
+8. Resend webhook events update delivery, open, and bounce states idempotently.
 
-### `main.py` — Orquestador principal
-Conecta todo el pipeline. Cuando corre hace en orden:
-1. Llama a EasyBroker y trae los contactos del día
-2. Los guarda en Google Sheets (sin duplicar)
-3. Lee cuáles no han recibido email todavía
-4. Les manda el email uno a uno con pausa entre cada envío
+## Stack
 
-```bash
-uv run python main.py --run-now
-uv run python main.py --run-now --max-emails 20
+- Python 3.11
+- FastAPI
+- Pydantic + `pydantic-settings`
+- Requests
+- GSpread + Google service account auth
+- Resend
+- Pytest
+- Ruff
+- uv
+- GitHub Actions
+- Railway
+
+## Repository structure
+
+```text
+.
+├── src/outreach_system/
+│   ├── api/
+│   ├── integrations/
+│   ├── models/
+│   ├── services/
+│   ├── cli.py
+│   ├── config.py
+│   ├── exceptions.py
+│   ├── logging_config.py
+│   └── main.py
+├── tests/
+│   ├── integration/
+│   └── unit/
+├── .github/workflows/
+├── .env.example
+├── Procfile
+├── README.md
+├── SECURITY.md
+└── pyproject.toml
 ```
 
----
+## Installation
 
-### `easybroker_client.py` — Conexión con EasyBroker
-Descarga los contactos creados **hoy desde las 00:00 hora México**. Maneja paginación automáticamente (50 contactos por página).
-
----
-
-### `sheets_client.py` — Google Sheets
-Guarda y lee datos del spreadsheet:
-
-| Columna | Qué guarda |
-|---|---|
-| ID, Nombre, Email, Teléfono... | Datos del contacto de EasyBroker |
-| Email Enviado | "No" al guardar, "Sí" al enviar |
-| Resend ID | ID único del email (para rastrear webhooks) |
-| Email Abierto | "Sí" cuando el contacto abre el correo |
-| Email Entregado | "Sí" cuando llega al servidor destino |
-| Rebote | "Sí" si el email no existe o fue rechazado |
-
-La deduplicación es automática por ID de EasyBroker.
-
----
-
-### `email_client.py` — Envío de correos via Resend
-Envía uno a uno con **2-3 minutos de pausa aleatoria** entre cada email. Rota remitentes:
-```
-Email 1 → rodrigo@realtekmx.com
-Email 2 → info@realtekmx.com
-Email 3 → rodrigo@realtekmx.com
-...
-```
-
----
-
-### `webhook_server.py` — Servidor de notificaciones (Railway)
-Cuando alguien abre un correo o rebota, Resend notifica a este servidor y actualiza Google Sheets automáticamente.
-
-**Eventos:**
-- `email.opened` → "Email Abierto = Sí"
-- `email.delivered` → "Email Entregado = Sí"
-- `email.bounced` → "Rebote = Sí"
-
-```bash
-uv run python webhook_server.py
-```
-
----
-
-## GitHub Actions — Automatización nocturna
-
-El pipeline corre automáticamente **todos los días a las 7 PM hora México**.
-
-**Trigger manual:** GitHub → Actions → "Realtek Outreach Pipeline" → "Run workflow"
-
----
-
-## Configuración inicial
-
-### 1. Instalar dependencias
 ```bash
 uv sync
 ```
 
-### 2. Variables de entorno (`.env`)
+## Configuration
 
-| Variable | Dónde conseguirla |
-|---|---|
-| `EASYBROKER_API_KEY` | EasyBroker → Configuración → API |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Google Cloud → IAM → Service Accounts → JSON |
-| `GOOGLE_SPREADSHEET_ID` | URL del sheet: `.../d/ESTE_ID/edit` |
-| `RESEND_API_KEY` | app.resend.com → API Keys |
-| `RESEND_FROM_EMAILS` | `rodrigo@realtekmx.com,info@realtekmx.com` |
-| `RESEND_WEBHOOK_SECRET` | Resend → Webhooks → Signing Secret |
+1. Copy `.env.example` to `.env`.
+2. Fill in runtime secrets locally.
+3. Mirror those values into GitHub Actions secrets and Railway environment variables.
 
-### 3. Secrets en GitHub
-Agrega los mismos valores en:
-**Repositorio → Settings → Secrets and variables → Actions**
+Important variables:
 
-> `GOOGLE_SERVICE_ACCOUNT_JSON` va como el **contenido completo del JSON**, no la ruta al archivo.
+- `EASYBROKER_API_KEY`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GOOGLE_SPREADSHEET_ID`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAILS`
+- `RESEND_WEBHOOK_SECRET`
+- `OUTREACH_TIMEZONE`
+- `EMAIL_DELAY_MIN_SECONDS`
+- `EMAIL_DELAY_MAX_SECONDS`
 
-### 4. Dar acceso al Sheet a la Service Account
-Compartir el Google Sheet con el email de la service account (`...@...iam.gserviceaccount.com`) como **Editor**.
+## Local usage
 
----
+Run the pipeline:
 
-## Estructura de archivos
-
+```bash
+uv run python -m outreach_system.cli --run-now
+uv run python -m outreach_system.cli --run-now --max-emails 20
 ```
-outreach-system/
-├── main.py                  # Orquesta todo el pipeline
-├── easybroker_client.py     # API de EasyBroker: trae contactos del día
-├── sheets_client.py         # Google Sheets: guarda, lee y actualiza filas
-├── email_client.py          # Resend: envía emails con delay y rota remitentes
-├── webhook_server.py        # FastAPI: recibe eventos de Resend → actualiza Sheets
-├── Procfile                 # Config de deploy para Railway
-├── .github/
-│   └── workflows/
-│       └── outreach.yml     # Cron job GitHub Actions (7 PM México diario)
-├── .env                     # Variables de entorno (NO subir a git)
-└── pyproject.toml           # Dependencias del proyecto
+
+Run the webhook service locally:
+
+```bash
+uv run uvicorn webhook_server:app --host 0.0.0.0 --port 8080
 ```
+
+Health check:
+
+```bash
+curl http://localhost:8080/health
+```
+
+## Tests
+
+```bash
+uv run ruff check .
+uv run pytest
+```
+
+## Deployment
+
+- GitHub Actions runs the sync + outreach pipeline.
+- Railway runs the FastAPI webhook service using `Procfile`.
+- The webhook endpoint is `POST /webhooks/resend`.
+
+## Technical decisions
+
+- Google Sheets is used as a pragmatic low-volume operator-facing datastore.
+- Typed Pydantic models replace arbitrary dictionaries for the core workflow.
+- `processing` state plus provider message ids improve idempotence within the limits of Sheets.
+- Webhook events are deduplicated using Svix event ids stored in a dedicated worksheet.
+
+## Limitations and trade-offs
+
+- Google Sheets offers accessibility and immediate visibility for non-technical users, but it is not transactional storage.
+- At larger volume, PostgreSQL should become the system of record.
+- A queue such as Redis, SQS, or Pub/Sub would be the next step to separate ingestion from email delivery.
+- The current email content is intentionally static because the refactor preserved the existing business behavior.
+
+Future target architecture:
+
+```text
+Scheduler
+  → CRM Sync
+  → PostgreSQL
+  → Queue
+  → Email Worker
+  → Resend
+  → Webhook
+  → PostgreSQL
+  → Reporting
+```
+
+## Security and privacy
+
+- Do not commit `.env` files or service account JSON files.
+- Rotate any credential previously used during private development before publishing.
+- Avoid logging API keys, full email addresses, phone numbers, or full webhook payloads.
+- See [SECURITY.md](SECURITY.md) for rotation and history-cleanup guidance.

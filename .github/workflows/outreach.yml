@@ -1,52 +1,56 @@
-name: Realtek Email Pipeline
+name: Outreach Pipeline
 
 on:
+  schedule:
+    # GitHub Actions cron uses UTC.
+    # 19:00 America/Mexico_City currently maps to 01:00 UTC the next day
+    # because Mexico City does not currently observe daylight saving time.
+    - cron: "0 1 * * *"
   workflow_dispatch:
     inputs:
       max_emails:
-        description: "Máximo de emails a enviar (default: 100)"
+        description: "Maximum emails to send in this execution"
         required: false
         default: "100"
         type: string
 
 jobs:
-  send-emails:
-    name: Sheet → Send 100 emails
+  outreach:
+    name: Sync contacts and send outreach
     runs-on: ubuntu-latest
-    timeout-minutes: 360   # 6 h máx (delay 2-3 min × 100 emails)
+    timeout-minutes: 360
+    concurrency:
+      group: outreach-pipeline
+      cancel-in-progress: false
 
     env:
-      GOOGLE_SERVICE_ACCOUNT_JSON:   ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-      GOOGLE_SPREADSHEET_ID:         ${{ secrets.GOOGLE_SPREADSHEET_ID }}
-      RESEND_API_KEY:                ${{ secrets.RESEND_API_KEY }}
-      RESEND_FROM_EMAILS:            ${{ secrets.RESEND_FROM_EMAILS }}
-      SEND_DELAY_MIN_SECONDS:        "120"
-      SEND_DELAY_MAX_SECONDS:        "180"
+      EASYBROKER_API_KEY: ${{ secrets.EASYBROKER_API_KEY }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAILS: ${{ secrets.RESEND_FROM_EMAILS }}
+      RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
+      OUTREACH_TIMEZONE: America/Mexico_City
+      EMAIL_DELAY_MIN_SECONDS: "120"
+      EMAIL_DELAY_MAX_SECONDS: "180"
+      LOG_LEVEL: INFO
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python + uv
+      - name: Install uv and Python
         uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
 
-      - name: Instalar dependencias
-        run: uv sync
+      - name: Sync dependencies
+        run: uv sync --frozen
 
-      - name: Escribir Service Account JSON a archivo temporal
-        run: |
-          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > /tmp/sa.json
-          echo "GOOGLE_SERVICE_ACCOUNT_JSON=/tmp/sa.json" >> $GITHUB_ENV
-
-      - name: Enriquecer emails desde sitios web
-        run: uv run python email_enricher.py --limit 300
-
-      - name: Validar emails (MX check)
+      - name: Validate pending email domains
         run: uv run python validate_emails.py
 
-      - name: Enviar emails
+      - name: Run outreach pipeline
         run: |
-          MAX=${{ github.event.inputs.max_emails || '100' }}
-          uv run python main.py --max-emails "$MAX"
+          MAX="${{ github.event.inputs.max_emails || '100' }}"
+          uv run python -m outreach_system.cli --run-now --max-emails "$MAX"

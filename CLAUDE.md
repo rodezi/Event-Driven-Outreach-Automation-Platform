@@ -1,6 +1,6 @@
-# Realtek Outreach System
+# Outreach Automation System
 
-Sistema de adquisición de clientes de Realtek dirigido a inmobiliarias en México.
+Sistema de automatización de outreach dirigido a inmobiliarias en México.
 
 ## Arquitectura general
 
@@ -89,7 +89,7 @@ GOOGLE_SERVICE_ACCOUNT_JSON=...
 GOOGLE_SPREADSHEET_ID
 GOOGLE_SERVICE_ACCOUNT_JSON
 RESEND_API_KEY
-RESEND_FROM_EMAILS     # ej: rodrigo@realtekmx.com,info@realtekmx.com
+RESEND_FROM_EMAILS     # ej: ops@example.com,campaign@example.com
 ```
 
 ## Límites y configuración
