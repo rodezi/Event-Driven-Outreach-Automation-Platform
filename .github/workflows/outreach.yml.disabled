@@ -1,3 +1,6 @@
+# Disabled on 2026-06-27 to pause all outreach executions in GitHub Actions.
+# Restore this file to `.github/workflows/outreach.yml` to re-enable the workflow.
+
 name: Outreach Pipeline
 
 on:
